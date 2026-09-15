@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Anchor } from 'lucide-react';
 import AreaSelector from '@/components/AreaSelector';
 import NamiNavigator from '@/components/NamiNavigator';
@@ -22,27 +22,58 @@ export default function Home() {
   const area = getAreaById(areaId);
   const targets = predictTargets(area);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+  const loadWeather = useCallback((lat: number, lon: number, showSpinner: boolean) => {
+    if (showSpinner) setLoading(true);
     setError(null);
-    setWeather(null);
 
-    fetchWeather(area.lat, area.lon)
+    return fetchWeather(lat, lon)
       .then((data) => {
-        if (!cancelled) setWeather(data);
+        setWeather(data);
       })
       .catch(() => {
-        if (!cancelled) setError('気象データの取得に失敗しました。時間を置いて再度お試しください。');
+        setError('気象データの取得に失敗しました。時間を置いて再度お試しください。');
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (showSpinner) setLoading(false);
       });
+  }, []);
 
-    return () => {
-      cancelled = true;
+  useEffect(() => {
+    setWeather(null);
+    loadWeather(area.lat, area.lon, true);
+  }, [area.lat, area.lon, loadWeather]);
+
+  // スマホのホーム画面に追加した状態（PWA的な使い方）だと、OSがページを
+  // 破棄せず裏で「一時停止」して再開することが多く、放置後に開き直しても
+  // 気象データや新しいコードが古いまま表示されてしまう。
+  // そこで、バックグラウンドから復帰したタイミングで:
+  //   ・短時間の離脱 → 気象データだけ静かに再取得
+  //   ・長時間（5分以上）の離脱 → ページごと再読み込み（新しいコードも反映）
+  // という自動リフレッシュを行い、ユーザーが手動で再起動しなくて済むようにする。
+  const RELOAD_AFTER_HIDDEN_MS = 5 * 60 * 1000;
+  const hiddenAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAtRef.current = Date.now();
+        return;
+      }
+      if (document.visibilityState !== 'visible' || hiddenAtRef.current === null) return;
+
+      const hiddenDuration = Date.now() - hiddenAtRef.current;
+      hiddenAtRef.current = null;
+
+      if (hiddenDuration >= RELOAD_AFTER_HIDDEN_MS) {
+        window.location.reload();
+      } else {
+        loadWeather(area.lat, area.lon, false);
+      }
     };
-  }, [area.lat, area.lon]);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [area.lat, area.lon, loadWeather]);
 
   const namiMessage = getNamiMessage(area, weather);
   const isAlert = !!weather && weather.windSpeed >= WIND_ALERT_THRESHOLD;
