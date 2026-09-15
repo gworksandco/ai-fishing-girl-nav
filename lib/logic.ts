@@ -26,7 +26,8 @@ export function getNamiMessage(area: FishingArea, weather: WeatherData | null): 
   }
 
   if (weatherCode <= 2 && windSpeed < 3) {
-    return `${area.name}は絶好の釣り日和！今日の上げ潮タイムを狙ってみてね！`;
+    const tideHint = getTideTimingHint(area);
+    return `${area.name}は絶好の釣り日和！${tideHint}`;
   }
 
   return `${area.name}の天気は${weatherCodeToLabel(
@@ -117,6 +118,29 @@ export function formatJstTime(iso: string): string {
     minute: '2-digit',
     timeZone: 'Asia/Tokyo',
   });
+}
+
+/**
+ * 「上げ潮タイム」を具体的な時刻で示すヒント文を生成する。
+ * 直近の満潮・干潮の時刻から、今が上げ潮／下げ潮のどちらで、
+ * 次の山（満潮）または谷（干潮）が何時ごろかを分かりやすく返す。
+ */
+export function getTideTimingHint(area: FishingArea, date: Date = new Date()): string {
+  const points = generateTideCurve(area, date);
+  const extremes = findTideExtremes(points);
+
+  if (extremes.length === 0) return '潮の動きをチェックして狙ってみてね！';
+
+  const now = date.getTime();
+  const upcoming = extremes.find((e) => new Date(e.time).getTime() > now);
+  // 本日分に「これから来る山・谷」が無ければ、直近(末尾)のものを参考として使う
+  const target = upcoming ?? extremes[extremes.length - 1];
+  const timeStr = formatJstTime(target.time);
+
+  if (target.type === 'high') {
+    return `今は上げ潮！${timeStr}ごろの満潮に向けてが狙い目だよ！`;
+  }
+  return `今は下げ潮で、${timeStr}ごろが干潮の底。そこから上げ潮に変わるタイミングも狙い目だよ！`;
 }
 
 // ============================================================================
