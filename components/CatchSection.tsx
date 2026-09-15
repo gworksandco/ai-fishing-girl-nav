@@ -31,31 +31,26 @@ export default function CatchSection({ area, targets }: Props) {
       </div>
 
       <div className="rounded-xl border border-ocean-100 bg-ocean-50/60 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-ocean-700 sm:text-sm">
-            <Twitter className="h-4 w-4" />
-            X（旧Twitter）広域リアルタイム釣果検索
-          </span>
-          <a
-            href={xSearchUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs font-semibold text-ocean-600 hover:underline"
-          >
-            開く <ExternalLink className="h-3 w-3" />
-          </a>
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ocean-700 sm:text-sm">
+          <Twitter className="h-4 w-4" />
+          X（旧Twitter）広域リアルタイム釣果検索
         </div>
-        <p className="mb-2 line-clamp-2 text-xs text-gray-500">検索条件: {area.xQuery}</p>
+        <p className="mb-3 line-clamp-2 text-xs text-gray-500">検索条件: {area.xQuery}</p>
         {/*
-          本番実装では、ここに公式 Twitter Embedded Timeline / Search Widget
-          （publish.twitter.com で発行した <blockquote class="twitter-timeline">）
-          を差し込む想定のプレースホルダー枠。
+          X（旧Twitter）は無料APIと埋め込みウィジェットへのアクセスを大幅に制限しているため、
+          維持費0円の制約下では常時安定動作するライブ検索埋め込みを組み込まず、
+          検索結果を新規タブで直接開くリンクボタンとして提供する。
         */}
-        <div className="flex h-28 items-center justify-center rounded-lg border-2 border-dashed border-ocean-200 bg-white text-center text-xs text-gray-400 sm:h-32">
-          X検索埋め込みウィジェット表示枠
-          <br />
-          （公式Widget実装時にこの枠を置き換え）
-        </div>
+        <a
+          href={xSearchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-ocean-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-ocean-700"
+        >
+          <Twitter className="h-4 w-4" />
+          Xで最新の釣果を見る
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
       </div>
     </section>
   );
