@@ -10,6 +10,8 @@ export type WeatherData = {
   windDirection: number; // 風向き (度: 0=北, 90=東, 180=南, 270=西)
   precipitationProbability: number; // 降水確率 (%)
   weatherCode: number; // WMO Weather code
+  sunrise: string; // 日の出時刻 (ISO, ローカルタイム)
+  sunset: string; // 日の入り時刻 (ISO, ローカルタイム)
   fetchedAt: string; // 取得時刻 (ISO)
 };
 
@@ -52,6 +54,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     longitude: String(lon),
     current: 'temperature_2m,wind_speed_10m,wind_direction_10m,weather_code',
     hourly: 'precipitation_probability',
+    daily: 'sunrise,sunset',
     wind_speed_unit: 'ms',
     timezone: 'Asia/Tokyo',
     forecast_days: '1',
@@ -85,12 +88,18 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     });
   }
 
+  const daily = json.daily ?? {};
+  const sunrise: string = daily.sunrise?.[0] ?? '';
+  const sunset: string = daily.sunset?.[0] ?? '';
+
   return {
     temperature: current.temperature_2m ?? 0,
     windSpeed: current.wind_speed_10m ?? 0,
     windDirection: current.wind_direction_10m ?? 0,
     precipitationProbability: hourlyPop[popIdx] ?? 0,
     weatherCode: current.weather_code ?? 0,
+    sunrise,
+    sunset,
     fetchedAt: current.time ?? new Date().toISOString(),
   };
 }

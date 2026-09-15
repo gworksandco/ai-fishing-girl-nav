@@ -48,6 +48,96 @@ export function predictTargets(area: FishingArea, date: Date = new Date()): Fish
 }
 
 // ============================================================================
+// ナミの「ラッキーカラー」＆ルアー提案ロジック
+// ----------------------------------------------------------------------------
+// 時間帯（日の出・日の入りからの朝夕マズメ判定）と天候（降水確率・天気コード）
+// から、以下3パターンのいずれかを決定的に判定する。
+//   1. 夜間 or 濁り潮想定（降水確率高） → 夜光・チャート系
+//   2. 朝マズメ／夕マズメ（日の出・日の入り前後1時間） → 赤金・ピンク系
+//   3. 昼間の澄み潮想定（晴れ） → ナチュラル・シルバー系
+// 優先順位はマズメ（もっとも限定的な時間帯）を最優先で判定する。
+// ============================================================================
+
+export type FishingConditionKey = 'night_glow' | 'mazume' | 'clear_day';
+
+export type FishingCondition = {
+  key: FishingConditionKey;
+  label: string;
+  luckyColors: string[];
+  namiLine: string;
+  lureName: string;
+  lureSearchKeyword: string;
+};
+
+const MAZUME_WINDOW_MINUTES = 60; // 日の出・日の入り前後1時間
+
+const FISHING_CONDITIONS: Record<FishingConditionKey, FishingCondition> = {
+  night_glow: {
+    key: 'night_glow',
+    label: '夜間・濁り潮コンディション',
+    luckyColors: ['チャート（蛍光黄緑）', 'グロー（夜光）'],
+    namiLine:
+      '夜や濁り潮の時はアピール力抜群の夜光カラーが圧倒的勝利！チャートグローが勝負色だよ！',
+    lureName: '夜光ジグヘッド＋蛍光ワーム',
+    lureSearchKeyword: '夜光 ジグヘッド 蛍光ワーム グロー',
+  },
+  clear_day: {
+    key: 'clear_day',
+    label: '日中・澄み潮コンディション',
+    luckyColors: ['ナチュラル（シルバー・リアルイワシ）', 'クリア'],
+    namiLine:
+      'お日様ギラギラで海が澄んでるよ！見切られにくいリアルなシルバー系で自然に見せよう！',
+    lureName: 'シルバー系メタルジグ / クリアワーム',
+    lureSearchKeyword: 'シルバー メタルジグ クリアワーム',
+  },
+  mazume: {
+    key: 'mazume',
+    label: '朝マズメ・夕マズメ（チャンスタイム）',
+    luckyColors: ['アカキン（赤金）', 'ピンク'],
+    namiLine:
+      '魚の活性が一番上がるチャンスタイム！視界に強烈アピールする赤金で一撃を狙ってね！',
+    lureName: '赤金カラーのブレードジグ / 1.5インチピンクワーム',
+    lureSearchKeyword: '赤金 ブレードジグ ピンクワーム 1.5インチ',
+  },
+};
+
+function minutesBetween(a: Date, b: Date): number {
+  return Math.abs(a.getTime() - b.getTime()) / 60000;
+}
+
+/**
+ * 気象データ（天気コード・降水確率・日の出/日の入り時刻）と現在時刻から、
+ * ナミの「ラッキーカラー」判定ロジックの結果を返す。
+ * weather が未取得（読み込み中）の場合は null を返す。
+ */
+export function getFishingCondition(
+  weather: WeatherData | null,
+  date: Date = new Date()
+): FishingCondition | null {
+  if (!weather || !weather.sunrise || !weather.sunset) return null;
+
+  const sunrise = new Date(weather.sunrise);
+  const sunset = new Date(weather.sunset);
+
+  // 1. 朝マズメ／夕マズメ判定（もっとも限定的な時間帯なので最優先）
+  const isDawnMazume = minutesBetween(date, sunrise) <= MAZUME_WINDOW_MINUTES;
+  const isDuskMazume = minutesBetween(date, sunset) <= MAZUME_WINDOW_MINUTES;
+  if (isDawnMazume || isDuskMazume) {
+    return FISHING_CONDITIONS.mazume;
+  }
+
+  // 2. 夜間（日の出前・日の入り後） or 濁り潮想定（降水確率が高い）
+  const isNight = date.getTime() < sunrise.getTime() || date.getTime() > sunset.getTime();
+  const isTurbid = weather.precipitationProbability >= 50;
+  if (isNight || isTurbid) {
+    return FISHING_CONDITIONS.night_glow;
+  }
+
+  // 3. 上記以外＝日中の澄み潮想定
+  return FISHING_CONDITIONS.clear_day;
+}
+
+// ============================================================================
 // 潮汐（タイド）シミュレーション
 // ----------------------------------------------------------------------------
 // ※本プロトタイプでは、重い潮汐データベースやAPIキーが必要な外部サービスを

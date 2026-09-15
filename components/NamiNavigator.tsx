@@ -11,6 +11,7 @@ type Props = {
  * AI釣りガール「ナミ」のナビゲーションヘッダー。
  * アバターは1枚の軽量WebP画像（24KB程度、320x320）で表示。
  * public/nami-avatar.webp を差し替えれば見た目を更新できる。
+ * 「今日のラッキーカラー」はLuckyColorCard（別カード）で表示する。
  */
 export default function NamiNavigator({ message, isAlert }: Props) {
   return (
@@ -37,12 +38,17 @@ export default function NamiNavigator({ message, isAlert }: Props) {
   );
 }
 
+// 画像を差し替えるたびにこの数字を1つ上げること。
+// CloudflareやブラウザのCDNキャッシュがファイル名そのままだと更新後も
+// 古い画像を返し続けることがあるため、クエリ文字列でキャッシュを強制的に無効化する。
+const AVATAR_VERSION = 3;
+
 /** ナミのアバター画像（軽量WebP、public/nami-avatar.webp） */
 function NamiAvatar() {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/nami-avatar.webp"
+      src={`/nami-avatar.webp?v=${AVATAR_VERSION}`}
       alt="ナミのアバター"
       width={80}
       height={80}

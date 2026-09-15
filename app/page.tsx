@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { Anchor } from 'lucide-react';
 import AreaSelector from '@/components/AreaSelector';
 import NamiNavigator from '@/components/NamiNavigator';
+import LuckyColorCard from '@/components/LuckyColorCard';
 import WeatherCard from '@/components/WeatherCard';
 import TideChart from '@/components/TideChart';
 import CatchSection from '@/components/CatchSection';
 import TackleAffiliate from '@/components/TackleAffiliate';
 import { DEFAULT_AREA_ID, getAreaById } from '@/lib/areas';
 import { fetchWeather, type WeatherData } from '@/lib/weather';
-import { getNamiMessage, predictTargets, WIND_ALERT_THRESHOLD } from '@/lib/logic';
+import { getNamiMessage, getFishingCondition, predictTargets, WIND_ALERT_THRESHOLD } from '@/lib/logic';
 
 export default function Home() {
   const [areaId, setAreaId] = useState(DEFAULT_AREA_ID);
@@ -45,6 +46,7 @@ export default function Home() {
 
   const namiMessage = getNamiMessage(area, weather);
   const isAlert = !!weather && weather.windSpeed >= WIND_ALERT_THRESHOLD;
+  const fishingCondition = getFishingCondition(weather);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 px-3 py-5 sm:gap-5 sm:px-6 sm:py-8">
@@ -63,6 +65,8 @@ export default function Home() {
       <AreaSelector selectedAreaId={areaId} onChange={setAreaId} />
 
       <NamiNavigator message={namiMessage} isAlert={isAlert} />
+
+      <LuckyColorCard condition={fishingCondition} />
 
       <WeatherCard weather={weather} loading={loading} error={error} />
 
