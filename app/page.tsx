@@ -6,6 +6,7 @@ import AreaSelector from '@/components/AreaSelector';
 import NamiNavigator from '@/components/NamiNavigator';
 import LuckyColorCard from '@/components/LuckyColorCard';
 import WeatherCard from '@/components/WeatherCard';
+import HourlyForecast from '@/components/HourlyForecast';
 import TideChart from '@/components/TideChart';
 import CatchSection from '@/components/CatchSection';
 import TackleAffiliate from '@/components/TackleAffiliate';
@@ -100,6 +101,8 @@ export default function Home() {
       <LuckyColorCard condition={fishingCondition} />
 
       <WeatherCard weather={weather} loading={loading} error={error} />
+
+      <HourlyForecast weather={weather} />
 
       <TideChart area={area} />
 

@@ -21,18 +21,20 @@ export function getNamiMessage(area: FishingArea, weather: WeatherData | null): 
     )}m/s）無理せず安全第一でね！`;
   }
 
+  // 潮のねらい目タイミングは、危険な強風時以外は常に伝える
+  const tideHint = getTideTimingHint(area);
+
   if (precipitationProbability >= 70) {
-    return `${area.name}は雨降りそう…降水確率${precipitationProbability}%だから、雨具の準備を忘れずにね！`;
+    return `${area.name}は雨降りそう…降水確率${precipitationProbability}%だから、雨具の準備を忘れずにね！${tideHint}`;
   }
 
   if (weatherCode <= 2 && windSpeed < 3) {
-    const tideHint = getTideTimingHint(area);
     return `${area.name}は絶好の釣り日和！${tideHint}`;
   }
 
   return `${area.name}の天気は${weatherCodeToLabel(
     weatherCode
-  )}、風速${windSpeed.toFixed(1)}m/s。無理のない範囲で楽しんでね！`;
+  )}、風速${windSpeed.toFixed(1)}m/s。${tideHint}`;
 }
 
 // ============================================================================
