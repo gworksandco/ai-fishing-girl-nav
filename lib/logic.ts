@@ -390,10 +390,20 @@ export function buildAmazonSearchUrl(keyword: string): string {
   return `https://www.amazon.co.jp/s?k=${encodeURIComponent(keyword)}&tag=YOUR_ASSOCIATE_ID-22`;
 }
 
+// 楽天アフィリエイトの「アフィリエイトID」。
+// 楽天アフィリエイト（https://affiliate.rakuten.co.jp/）で発行したテキストリンクの
+// href（https://hb.afl.rakuten.co.jp/ichiba/【ここ】/?pc=...）から取得した値。
+const RAKUTEN_AFFILIATE_ID = '57966afe.3e7e1374.57966aff.e3c4c8de';
+
 export function buildRakutenSearchUrl(keyword: string): string {
-  return `https://search.rakuten.co.jp/search/mall/${encodeURIComponent(
-    keyword
-  )}/?scid=af_pc_link_YOUR_AFFILIATE_ID`;
+  const searchUrl = `https://search.rakuten.co.jp/search/mall/${encodeURIComponent(keyword)}/`;
+
+  if (!RAKUTEN_AFFILIATE_ID) {
+    return searchUrl;
+  }
+
+  const encodedTarget = encodeURIComponent(searchUrl);
+  return `https://hb.afl.rakuten.co.jp/ichiba/${RAKUTEN_AFFILIATE_ID}/?pc=${encodedTarget}&m=${encodedTarget}`;
 }
 
 export function buildXSearchUrl(query: string): string {
