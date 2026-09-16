@@ -54,11 +54,7 @@ export default function TackleAffiliate({ targets }: Props) {
         })}
       </div>
       <p className="mt-3 text-[11px] text-gray-400">
-        ※本サイトはAmazonアソシエイト・楽天アフィリエイトプログラムに参加予定です。リンク先URLの
-        <code className="mx-1 rounded bg-gray-100 px-1">YOUR_ASSOCIATE_ID</code>
-        /
-        <code className="mx-1 rounded bg-gray-100 px-1">YOUR_AFFILIATE_ID</code>
-        は実際のIDに置き換えてください。
+        ※本サイトの商品リンクにはアフィリエイトプログラムを利用しています。
       </p>
     </section>
   );

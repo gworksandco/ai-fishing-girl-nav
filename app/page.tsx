@@ -85,7 +85,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <Anchor className="h-6 w-6 text-ocean-600" />
           <h1 className="text-base font-extrabold text-ocean-900 sm:text-xl">
-            AI釣りガールナビ
+            海気象＆釣果ナビ
             <span className="ml-1 hidden text-xs font-medium text-gray-400 sm:inline">
               全国対応 気象＆釣果ダッシュボード
             </span>
