@@ -19,7 +19,7 @@ export default function NamiNavigator({ message, isAlert }: Props) {
       <NamiAvatar />
       <div className="flex-1">
         <div className="mb-1 flex items-center gap-1.5">
-          <span className="text-sm font-bold tracking-wide">AI釣りガール ナミ</span>
+          <span className="text-sm font-bold tracking-wide">ナミ</span>
           {isAlert ? (
             <AlertTriangle className="h-4 w-4 text-yellow-300" aria-hidden />
           ) : (
