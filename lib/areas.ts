@@ -137,6 +137,48 @@ export const FISHING_AREAS: FishingArea[] = [
       { name: 'アキアジ(サケ)', months: [9, 10] },
     ],
   },
+  {
+    id: 'miura',
+    name: '三浦半島エリア',
+    prefecture: '神奈川県',
+    lat: 35.14,
+    lon: 139.62,
+    xQuery: '#三浦半島 釣果 OR #城ヶ島 釣果 OR #剱崎 OR #江の島 釣果',
+    targets: [
+      { name: 'アジ', months: [4, 5, 6, 9, 10, 11] },
+      { name: 'ワラサ', months: [10, 11, 12, 1] },
+      { name: 'カサゴ', months: [1, 2, 3, 11, 12] },
+      { name: 'メバル', months: [1, 2, 3, 12] },
+    ],
+  },
+  {
+    id: 'hiroshima',
+    name: '広島・呉エリア',
+    prefecture: '広島県',
+    lat: 34.35,
+    lon: 132.57,
+    xQuery: '#広島 釣果 OR #呉 釣果 OR #瀬戸内海 釣り OR #音戸',
+    targets: [
+      { name: 'メバル', months: [1, 2, 3, 12] },
+      { name: 'カサゴ', months: [1, 2, 3, 11, 12] },
+      { name: 'チヌ', months: [3, 4, 5, 9, 10, 11] },
+      { name: 'コウイカ', months: [9, 10, 11] },
+    ],
+  },
+  {
+    id: 'akashi',
+    name: '明石・淡路島エリア',
+    prefecture: '兵庫県',
+    lat: 34.63,
+    lon: 135.0,
+    xQuery: '#明石 釣果 OR #淡路島 釣果 OR #須磨 釣果',
+    targets: [
+      { name: 'マダイ', months: [3, 4, 5, 11, 12] },
+      { name: 'タコ(マダコ)', months: [6, 7, 8, 9] },
+      { name: 'アジ', months: [4, 5, 6, 9, 10, 11] },
+      { name: 'サワラ', months: [9, 10, 11] },
+    ],
+  },
 ];
 
 export const DEFAULT_AREA_ID = FISHING_AREAS[0].id;

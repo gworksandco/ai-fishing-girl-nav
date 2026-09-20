@@ -26,6 +26,7 @@ export type WeatherData = {
   pressureChange3h: number; // 3時間前からの気圧変化 (hPa、負なら下降中)
   pressureTrend: PressureTrend; // 気圧が下降中の方が魚の活性が上がるとされる（経験則）
   hourlyForecast: HourlyForecastPoint[]; // 現在時刻から数時間先までの予報（釣行計画用）
+  seaTemperature: number | null; // 海面水温 (℃、モデル推定値)。取得失敗時はnull
   fetchedAt: string; // 取得時刻 (ISO)
 };
 
@@ -56,6 +57,7 @@ export function degreeToCompass(deg: number): string {
 }
 
 const OPEN_METEO_BASE = 'https://api.open-meteo.com/v1/forecast';
+const MARINE_API_BASE = 'https://marine-api.open-meteo.com/v1/marine';
 
 /**
  * 指定した緯度・経度の現在の海気象データを取得する。
@@ -65,6 +67,33 @@ const OPEN_METEO_BASE = 'https://api.open-meteo.com/v1/forecast';
 const HOURLY_FORECAST_HOURS = 6; // 数時間先の予報として表示する時間数
 const PRESSURE_TREND_WINDOW_HOURS = 3; // 気圧トレンドを見る過去の時間幅
 const PRESSURE_TREND_THRESHOLD_HPA = 1.0; // このhPa以上の変化があればトレンドありと判定
+
+/**
+ * Open-Meteo Marine Weather API（無料・APIキー不要）から海面水温を取得する。
+ * 内湾・漁港など狭い場所ではモデル解像度の関係で実際の水温とズレることがあるため、
+ * あくまで目安値。取得に失敗しても本体の気象データ表示は止めたくないので、
+ * エラー時は例外を投げずnullを返す。
+ */
+async function fetchSeaTemperature(lat: number, lon: number): Promise<number | null> {
+  try {
+    const params = new URLSearchParams({
+      latitude: String(lat),
+      longitude: String(lon),
+      current: 'sea_surface_temperature',
+      timezone: 'Asia/Tokyo',
+    });
+    const res = await fetch(`${MARINE_API_BASE}?${params.toString()}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const temp = json.current?.sea_surface_temperature;
+    return typeof temp === 'number' ? Math.round(temp * 10) / 10 : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
   const params = new URLSearchParams({
@@ -80,6 +109,9 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     // 深夜近くに見ても数時間先まで予報が切れないよう2日分取得する
     forecast_days: '2',
   });
+
+  // 海面水温は別APIなので、本体の気象データ取得と並行して走らせておく
+  const seaTemperaturePromise = fetchSeaTemperature(lat, lon);
 
   const res = await fetch(`${OPEN_METEO_BASE}?${params.toString()}`, {
     cache: 'no-store',
@@ -143,6 +175,8 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     pressureTrend = 'rising';
   }
 
+  const seaTemperature = await seaTemperaturePromise;
+
   return {
     temperature: current.temperature_2m ?? 0,
     windSpeed: current.wind_speed_10m ?? 0,
@@ -155,6 +189,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     pressureChange3h,
     pressureTrend,
     hourlyForecast,
+    seaTemperature,
     fetchedAt: current.time ?? new Date().toISOString(),
   };
 }

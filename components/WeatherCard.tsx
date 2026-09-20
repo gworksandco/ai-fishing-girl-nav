@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import {
   Wind,
   Thermometer,
+  Droplets,
   CloudRain,
   Compass,
   AlertTriangle,
@@ -13,15 +14,16 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { degreeToCompass, weatherCodeToLabel, type WeatherData } from '@/lib/weather';
-import { WIND_ALERT_THRESHOLD } from '@/lib/logic';
+import { WIND_ALERT_THRESHOLD, type SeaTemperatureInsight } from '@/lib/logic';
 
 type Props = {
   weather: WeatherData | null;
   loading: boolean;
   error: string | null;
+  seaTemperatureInsight?: SeaTemperatureInsight | null;
 };
 
-export default function WeatherCard({ weather, loading, error }: Props) {
+export default function WeatherCard({ weather, loading, error, seaTemperatureInsight }: Props) {
   const isWindAlert = !!weather && weather.windSpeed >= WIND_ALERT_THRESHOLD;
 
   return (
@@ -54,7 +56,7 @@ export default function WeatherCard({ weather, loading, error }: Props) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
             <StatTile
               icon={<Wind className={isWindAlert ? 'text-coral-500' : 'text-ocean-600'} />}
               label="風速"
@@ -75,6 +77,13 @@ export default function WeatherCard({ weather, loading, error }: Props) {
               unit="℃"
             />
             <StatTile
+              icon={<Droplets className={seaTemperatureInsight?.favorable ? 'text-coral-500' : 'text-ocean-600'} />}
+              label="水温"
+              value={weather.seaTemperature != null ? `${weather.seaTemperature.toFixed(1)}` : '—'}
+              unit="℃"
+              alert={!!seaTemperatureInsight?.favorable}
+            />
+            <StatTile
               icon={<CloudRain className="text-ocean-600" />}
               label="降水確率"
               value={`${Math.round(weather.precipitationProbability)}`}
@@ -93,9 +102,19 @@ export default function WeatherCard({ weather, loading, error }: Props) {
               気圧下降中（3時間で{Math.abs(weather.pressureChange3h).toFixed(1)}hPa）：魚の活性が上がりやすいサインだよ
             </p>
           )}
+          {seaTemperatureInsight && (
+            <p
+              className={`mt-2 text-[11px] font-semibold ${
+                seaTemperatureInsight.favorable ? 'text-coral-500' : 'text-gray-400'
+              }`}
+            >
+              {seaTemperatureInsight.text}
+            </p>
+          )}
           <p className="mt-3 text-xs text-gray-400">
             現在の空模様：{weatherCodeToLabel(weather.weatherCode)}
           </p>
+          <p className="mt-1 text-[10px] text-gray-300">※水温はモデル推定値の目安です</p>
         </>
       )}
     </section>

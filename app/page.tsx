@@ -12,7 +12,13 @@ import CatchSection from '@/components/CatchSection';
 import TackleAffiliate from '@/components/TackleAffiliate';
 import { DEFAULT_AREA_ID, getAreaById } from '@/lib/areas';
 import { fetchWeather, type WeatherData } from '@/lib/weather';
-import { getNamiMessage, getFishingCondition, predictTargets, WIND_ALERT_THRESHOLD } from '@/lib/logic';
+import {
+  getNamiMessage,
+  getFishingCondition,
+  predictTargets,
+  getSeaTemperatureInsight,
+  WIND_ALERT_THRESHOLD,
+} from '@/lib/logic';
 import { pickRandomNamiPhoto } from '@/lib/namiPhotos';
 
 export default function Home() {
@@ -87,6 +93,7 @@ export default function Home() {
   const namiMessage = getNamiMessage(area, weather);
   const isAlert = !!weather && weather.windSpeed >= WIND_ALERT_THRESHOLD;
   const fishingCondition = getFishingCondition(weather);
+  const seaTemperatureInsight = getSeaTemperatureInsight(area, weather);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 px-3 py-5 sm:gap-5 sm:px-6 sm:py-8">
@@ -108,13 +115,18 @@ export default function Home() {
 
       <LuckyColorCard condition={fishingCondition} />
 
-      <WeatherCard weather={weather} loading={loading} error={error} />
+      <WeatherCard
+        weather={weather}
+        loading={loading}
+        error={error}
+        seaTemperatureInsight={seaTemperatureInsight}
+      />
 
       <HourlyForecast weather={weather} />
 
       <TideChart area={area} weather={weather} namiPhotoUrl={namiPhoto} />
 
-      <CatchSection area={area} targets={targets} />
+      <CatchSection area={area} targets={targets} weather={weather} />
 
       <TackleAffiliate targets={targets} />
 

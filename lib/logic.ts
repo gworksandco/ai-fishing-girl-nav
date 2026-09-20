@@ -362,6 +362,81 @@ export function getPeakActivityHint(
 }
 
 // ============================================================================
+// 水温 × ターゲット魚種の適水温マッチング
+// ----------------------------------------------------------------------------
+// Open-Meteo Marine API（モデル推定値）の海面水温と、魚種ごとのおおよその
+// 適水温レンジを照合し、「今の水温は狙い目の魚に合っているか」を判定する。
+// レンジは一般的な目安であり、個体・年・地域差があることに注意。
+// ============================================================================
+
+export type TempRange = { min: number; max: number };
+
+export const TARGET_TEMP_RANGES: Record<string, TempRange> = {
+  'アジ': { min: 15, max: 24 },
+  'タチウオ': { min: 20, max: 27 },
+  'アオリイカ': { min: 20, max: 26 },
+  'メバル': { min: 8, max: 18 },
+  'サバ': { min: 16, max: 24 },
+  'カサゴ': { min: 10, max: 20 },
+  'キハダマグロ': { min: 24, max: 29 },
+  'キス': { min: 18, max: 25 },
+  'チヌ': { min: 15, max: 25 },
+  'ヒラメ': { min: 15, max: 23 },
+  'イサキ': { min: 18, max: 24 },
+  'マダイ': { min: 15, max: 22 },
+  'カツオ': { min: 19, max: 24 },
+  'グレ': { min: 14, max: 20 },
+  'サワラ': { min: 18, max: 24 },
+  'クロダイ': { min: 15, max: 25 },
+  'GT(ロウニンアジ)': { min: 25, max: 30 },
+  'ミーバイ': { min: 22, max: 28 },
+  'ダツ': { min: 20, max: 27 },
+  'イカ(スルメイカ)': { min: 13, max: 20 },
+  'アキアジ(サケ)': { min: 10, max: 18 },
+  'ワラサ': { min: 15, max: 22 },
+  'コウイカ': { min: 17, max: 23 },
+  'タコ(マダコ)': { min: 18, max: 26 },
+};
+
+export type SeaTemperatureInsight = {
+  text: string;
+  favorable: boolean;
+};
+
+/**
+ * 現在の海面水温と、今週のおすすめターゲットの適水温レンジを照合し、
+ * 一致していれば「狙い目」、外れていればその旨を伝えるヒントを返す。
+ * 水温が未取得（API失敗含む）の場合はnullを返す。
+ */
+export function getSeaTemperatureInsight(
+  area: FishingArea,
+  weather: WeatherData | null,
+  date: Date = new Date()
+): SeaTemperatureInsight | null {
+  if (!weather || weather.seaTemperature == null) return null;
+
+  const temp = weather.seaTemperature;
+  const targets = predictTargets(area, date);
+  const matched = targets.filter((t) => {
+    const range = TARGET_TEMP_RANGES[t.name];
+    return !!range && temp >= range.min && temp <= range.max;
+  });
+
+  if (matched.length > 0) {
+    const names = matched.map((t) => t.name).join('・');
+    return {
+      text: `水温${temp.toFixed(1)}℃は${names}の適水温レンジ内！狙い目だよ！`,
+      favorable: true,
+    };
+  }
+
+  return {
+    text: `水温${temp.toFixed(1)}℃。今のおすすめターゲットの適水温からは少し外れ気味かも。`,
+    favorable: false,
+  };
+}
+
+// ============================================================================
 // ターゲット別おすすめ仕掛け（アフィリエイト導線用マスターデータ）
 // ============================================================================
 
@@ -499,6 +574,24 @@ const TACKLE_MASTER: Record<string, Omit<TackleRecommendation, 'target'>> = {
     description: '秋の遡上シーズンに合わせたアキアジ狙いの定番セット。',
     amazonKeyword: 'アキアジ ルアー セット',
     rakutenKeyword: 'サケ釣り 仕掛けセット',
+  },
+  'ワラサ': {
+    title: 'ワラサ・青物用ジギングセット',
+    description: '秋の回遊シーズンに堤防・船から狙える人気の青物。中型メタルジグでのジギングが定番。',
+    amazonKeyword: 'ワラサ ジギング メタルジグ',
+    rakutenKeyword: '青物 ジギングセット',
+  },
+  'コウイカ': {
+    title: 'コウイカ用エギ・スッテセット',
+    description: '瀬戸内海の秋の風物詩、コウイカ狙いの定番。専用エギやスッテでボトムをじっくり探ろう。',
+    amazonKeyword: 'コウイカ エギ セット',
+    rakutenKeyword: 'コウイカ釣り 仕掛け',
+  },
+  'タコ(マダコ)': {
+    title: 'タコエギ・タコジグセット',
+    description: '明石名物、マダコ狙いの定番仕掛け。根周りをズル引きで誘うのがコツ。',
+    amazonKeyword: 'タコエギ タコジグ セット',
+    rakutenKeyword: 'タコ釣り 仕掛けセット',
   },
 };
 

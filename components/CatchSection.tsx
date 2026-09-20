@@ -1,16 +1,25 @@
 'use client';
 
-import { Fish, Twitter, ExternalLink } from 'lucide-react';
+import { Fish, Twitter, ExternalLink, Droplets } from 'lucide-react';
 import type { FishingArea, FishTarget } from '@/lib/areas';
-import { buildXSearchUrl } from '@/lib/logic';
+import { buildXSearchUrl, TARGET_TEMP_RANGES } from '@/lib/logic';
+import type { WeatherData } from '@/lib/weather';
 
 type Props = {
   area: FishingArea;
   targets: FishTarget[];
+  weather: WeatherData | null;
 };
 
-export default function CatchSection({ area, targets }: Props) {
+export default function CatchSection({ area, targets, weather }: Props) {
   const xSearchUrl = buildXSearchUrl(area.xQuery);
+  const seaTemp = weather?.seaTemperature;
+
+  const isTempFavorable = (name: string) => {
+    if (seaTemp == null) return false;
+    const range = TARGET_TEMP_RANGES[name];
+    return !!range && seaTemp >= range.min && seaTemp <= range.max;
+  };
 
   return (
     <section className="rounded-2xl bg-white p-4 shadow-card sm:p-5">
@@ -19,16 +28,27 @@ export default function CatchSection({ area, targets }: Props) {
         今週のおすすめターゲット
       </h2>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {targets.map((t) => (
-          <span
-            key={t.name}
-            className="rounded-full bg-ocean-600 px-3 py-1.5 text-xs font-bold text-white sm:text-sm"
-          >
-            {t.name}
-          </span>
-        ))}
+      <div className="mb-2 flex flex-wrap gap-2">
+        {targets.map((t) => {
+          const favorable = isTempFavorable(t.name);
+          return (
+            <span
+              key={t.name}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-white sm:text-sm ${
+                favorable ? 'bg-coral-500' : 'bg-ocean-600'
+              }`}
+            >
+              {t.name}
+              {favorable && <Droplets className="h-3 w-3" aria-hidden />}
+            </span>
+          );
+        })}
       </div>
+      <p className="mb-4 text-[11px] text-gray-400">
+        {seaTemp != null && targets.some((t) => isTempFavorable(t.name))
+          ? '※マーク付きは今の水温にちょうど良い魚種だよ'
+          : ' '}
+      </p>
 
       <div className="rounded-xl border border-ocean-100 bg-ocean-50/60 p-3">
         <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ocean-700 sm:text-sm">
