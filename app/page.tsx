@@ -13,12 +13,20 @@ import TackleAffiliate from '@/components/TackleAffiliate';
 import { DEFAULT_AREA_ID, getAreaById } from '@/lib/areas';
 import { fetchWeather, type WeatherData } from '@/lib/weather';
 import { getNamiMessage, getFishingCondition, predictTargets, WIND_ALERT_THRESHOLD } from '@/lib/logic';
+import { pickRandomNamiPhoto } from '@/lib/namiPhotos';
 
 export default function Home() {
   const [areaId, setAreaId] = useState(DEFAULT_AREA_ID);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 訪問のたびにナミの写真をランダムに変える。SSR/CSRの不一致を避けるため
+  // 初期値はnullにし、マウント後（クライアント側）にだけ抽選する。
+  const [namiPhoto, setNamiPhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNamiPhoto(pickRandomNamiPhoto());
+  }, []);
 
   const area = getAreaById(areaId);
   const targets = predictTargets(area);
@@ -96,7 +104,7 @@ export default function Home() {
 
       <AreaSelector selectedAreaId={areaId} onChange={setAreaId} />
 
-      <NamiNavigator message={namiMessage} isAlert={isAlert} />
+      <NamiNavigator message={namiMessage} isAlert={isAlert} photoUrl={namiPhoto} />
 
       <LuckyColorCard condition={fishingCondition} />
 
@@ -104,7 +112,7 @@ export default function Home() {
 
       <HourlyForecast weather={weather} />
 
-      <TideChart area={area} weather={weather} />
+      <TideChart area={area} weather={weather} namiPhotoUrl={namiPhoto} />
 
       <CatchSection area={area} targets={targets} />
 

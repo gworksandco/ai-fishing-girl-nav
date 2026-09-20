@@ -27,9 +27,10 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 type Props = {
   area: FishingArea;
   weather: WeatherData | null;
+  namiPhotoUrl?: string | null;
 };
 
-export default function TideChart({ area, weather }: Props) {
+export default function TideChart({ area, weather, namiPhotoUrl }: Props) {
   const { chartData, extremes, currentHour, tidePhase, peakActivityHint } = useMemo(() => {
     const points = generateTideCurve(area);
     const extremes = findTideExtremes(points);
@@ -128,11 +129,23 @@ export default function TideChart({ area, weather }: Props) {
         ))}
       </div>
 
-      <div className="mt-3 flex items-start gap-2 rounded-xl bg-coral-500/10 px-3 py-3">
-        <Target className="mt-0.5 h-4 w-4 shrink-0 text-coral-500" />
-        <p className="text-xs font-semibold leading-relaxed text-coral-600 sm:text-sm">
-          {peakActivityHint}
-        </p>
+      <div className="mt-3 flex items-start gap-3 rounded-xl bg-coral-500/10 px-3 py-3">
+        {namiPhotoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={namiPhotoUrl}
+            alt="ナミ"
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0 rounded-full border-2 border-coral-500/40 object-cover"
+          />
+        )}
+        <div className="flex items-start gap-2">
+          <Target className="mt-0.5 h-4 w-4 shrink-0 text-coral-500" />
+          <p className="text-xs font-semibold leading-relaxed text-coral-600 sm:text-sm">
+            {peakActivityHint}
+          </p>
+        </div>
       </div>
 
       <p className="sr-only">現在時刻: {currentHour.toFixed(1)}時</p>

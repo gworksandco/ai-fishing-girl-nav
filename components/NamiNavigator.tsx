@@ -5,18 +5,20 @@ import { AlertTriangle, Sparkles } from 'lucide-react';
 type Props = {
   message: string;
   isAlert: boolean;
+  photoUrl?: string | null;
 };
 
 /**
  * AI釣りガール「ナミ」のナビゲーションヘッダー。
- * アバターは1枚の軽量WebP画像（24KB程度、320x320）で表示。
- * public/nami-avatar.webp を差し替えれば見た目を更新できる。
+ * アバターは軽量WebP画像で表示。photoUrlが渡された場合はそれを使い、
+ * 訪問のたびにランダムなナミの写真が表示されるようにしている
+ * （lib/namiPhotos.ts の写真プールから選ばれる）。
  * 「今日のラッキーカラー」はLuckyColorCard（別カード）で表示する。
  */
-export default function NamiNavigator({ message, isAlert }: Props) {
+export default function NamiNavigator({ message, isAlert, photoUrl }: Props) {
   return (
     <div className="flex items-start gap-3 rounded-2xl bg-gradient-to-br from-ocean-500 to-ocean-700 p-4 text-white shadow-card sm:items-center sm:gap-4 sm:p-5">
-      <NamiAvatar />
+      <NamiAvatar photoUrl={photoUrl} />
       <div className="flex-1">
         <div className="mb-1 flex items-center gap-1.5">
           <span className="text-sm font-bold tracking-wide">ナミ</span>
@@ -43,12 +45,13 @@ export default function NamiNavigator({ message, isAlert }: Props) {
 // 古い画像を返し続けることがあるため、クエリ文字列でキャッシュを強制的に無効化する。
 const AVATAR_VERSION = 3;
 
-/** ナミのアバター画像（軽量WebP、public/nami-avatar.webp） */
-function NamiAvatar() {
+/** ナミのアバター画像（軽量WebP）。photoUrl未指定時はデフォルト画像にフォールバック。 */
+function NamiAvatar({ photoUrl }: { photoUrl?: string | null }) {
+  const src = photoUrl ?? `/nami-avatar.webp?v=${AVATAR_VERSION}`;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`/nami-avatar.webp?v=${AVATAR_VERSION}`}
+      src={src}
       alt="ナミのアバター"
       width={80}
       height={80}
