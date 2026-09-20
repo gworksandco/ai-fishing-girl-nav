@@ -1,7 +1,17 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Wind, Thermometer, CloudRain, Compass, AlertTriangle, Loader2 } from 'lucide-react';
+import {
+  Wind,
+  Thermometer,
+  CloudRain,
+  Compass,
+  AlertTriangle,
+  Loader2,
+  Gauge,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
 import { degreeToCompass, weatherCodeToLabel, type WeatherData } from '@/lib/weather';
 import { WIND_ALERT_THRESHOLD } from '@/lib/logic';
 
@@ -44,7 +54,7 @@ export default function WeatherCard({ weather, loading, error }: Props) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <StatTile
               icon={<Wind className={isWindAlert ? 'text-coral-500' : 'text-ocean-600'} />}
               label="風速"
@@ -70,7 +80,19 @@ export default function WeatherCard({ weather, loading, error }: Props) {
               value={`${Math.round(weather.precipitationProbability)}`}
               unit="%"
             />
+            <StatTile
+              icon={<PressureTrendIcon trend={weather.pressureTrend} />}
+              label="気圧"
+              value={`${weather.pressure.toFixed(0)}`}
+              unit="hPa"
+              alert={weather.pressureTrend === 'falling'}
+            />
           </div>
+          {weather.pressureTrend === 'falling' && (
+            <p className="mt-2 text-[11px] font-semibold text-coral-500">
+              気圧下降中（3時間で{Math.abs(weather.pressureChange3h).toFixed(1)}hPa）：魚の活性が上がりやすいサインだよ
+            </p>
+          )}
           <p className="mt-3 text-xs text-gray-400">
             現在の空模様：{weatherCodeToLabel(weather.weatherCode)}
           </p>
@@ -78,6 +100,12 @@ export default function WeatherCard({ weather, loading, error }: Props) {
       )}
     </section>
   );
+}
+
+function PressureTrendIcon({ trend }: { trend: WeatherData['pressureTrend'] }) {
+  if (trend === 'falling') return <TrendingDown className="text-coral-500" />;
+  if (trend === 'rising') return <TrendingUp className="text-ocean-600" />;
+  return <Gauge className="text-ocean-600" />;
 }
 
 function StatTile({

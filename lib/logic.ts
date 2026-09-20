@@ -8,6 +8,22 @@ import { weatherCodeToLabel } from './weather';
 
 export const WIND_ALERT_THRESHOLD = 5; // m/s
 
+/**
+ * 気圧トレンドのヒント。「気圧が下がるタイミングは魚の活性が上がりやすい」
+ * という釣り人の間でよく言われる経験則をコメントにする。
+ */
+function getPressureHint(weather: WeatherData): string {
+  if (weather.pressureTrend === 'falling') {
+    return `気圧が3時間で${Math.abs(weather.pressureChange3h).toFixed(
+      1
+    )}hPa下降中！魚の活性が上がりやすいタイミングかも！`;
+  }
+  if (weather.pressureTrend === 'rising') {
+    return '気圧は上昇中。やや渋い展開になりやすいから、粘り強くいこう！';
+  }
+  return '';
+}
+
 export function getNamiMessage(area: FishingArea, weather: WeatherData | null): string {
   if (!weather) {
     return `${area.name}の気象データを読み込み中だよ、ちょっと待っててね！`;
@@ -21,20 +37,22 @@ export function getNamiMessage(area: FishingArea, weather: WeatherData | null): 
     )}m/s）無理せず安全第一でね！`;
   }
 
-  // 潮のねらい目タイミングは、危険な強風時以外は常に伝える
+  // 潮のねらい目タイミング・気圧トレンドは、危険な強風時以外は常に伝える
   const tideHint = getTideTimingHint(area);
+  const pressureHint = getPressureHint(weather);
+  const detailHint = pressureHint ? `${tideHint}${pressureHint}` : tideHint;
 
   if (precipitationProbability >= 70) {
-    return `${area.name}は雨降りそう…降水確率${precipitationProbability}%だから、雨具の準備を忘れずにね！${tideHint}`;
+    return `${area.name}は雨降りそう…降水確率${precipitationProbability}%だから、雨具の準備を忘れずにね！${detailHint}`;
   }
 
   if (weatherCode <= 2 && windSpeed < 3) {
-    return `${area.name}は絶好の釣り日和！${tideHint}`;
+    return `${area.name}は絶好の釣り日和！${detailHint}`;
   }
 
   return `${area.name}の天気は${weatherCodeToLabel(
     weatherCode
-  )}、風速${windSpeed.toFixed(1)}m/s。${tideHint}`;
+  )}、風速${windSpeed.toFixed(1)}m/s。${detailHint}`;
 }
 
 // ============================================================================
@@ -161,12 +179,33 @@ function seededFraction(seed: string): number {
   return (Math.abs(hash) % 1000) / 1000;
 }
 
-export function generateTideCurve(area: FishingArea, date: Date = new Date()): TidePoint[] {
-  const dayPhase = seededFraction(area.id) * Math.PI * 2;
-  // 月齢っぽい満ち欠け（大潮/小潮）を年間通日から簡易算出
+/**
+ * 月齢っぽい満ち欠け（大潮/小潮）を年間通日から簡易算出する係数（0.3〜1.0）。
+ * 実際の月齢とは連動していないが、約14.76日周期で大潮・小潮を繰り返す
+ * という潮汐の基本パターンを模している。エリアには依存しない（実際の
+ * 大潮・小潮は地域共通の天文現象のため）。
+ */
+function getSpringNeapFactor(date: Date): number {
   const startOfYear = new Date(date.getFullYear(), 0, 0);
   const dayOfYear = Math.floor((date.getTime() - startOfYear.getTime()) / 86400000);
-  const springNeapFactor = 0.65 + 0.35 * Math.sin((dayOfYear / 14.76) * Math.PI * 2);
+  return 0.65 + 0.35 * Math.sin((dayOfYear / 14.76) * Math.PI * 2);
+}
+
+export type TidePhaseName = '大潮' | '中潮' | '小潮' | '長潮' | '若潮';
+
+/** 潮回り（大潮〜若潮）のラベルを返す。簡易シミュレーションに基づく目安。 */
+export function getTidePhaseLabel(date: Date = new Date()): TidePhaseName {
+  const factor = getSpringNeapFactor(date);
+  if (factor >= 0.9) return '大潮';
+  if (factor >= 0.75) return '中潮';
+  if (factor >= 0.55) return '小潮';
+  if (factor >= 0.4) return '長潮';
+  return '若潮';
+}
+
+export function generateTideCurve(area: FishingArea, date: Date = new Date()): TidePoint[] {
+  const dayPhase = seededFraction(area.id) * Math.PI * 2;
+  const springNeapFactor = getSpringNeapFactor(date);
 
   const points: TidePoint[] = [];
   for (let i = 0; i <= 48; i++) {
@@ -220,8 +259,9 @@ export function formatJstTime(iso: string): string {
 export function getTideTimingHint(area: FishingArea, date: Date = new Date()): string {
   const points = generateTideCurve(area, date);
   const extremes = findTideExtremes(points);
+  const phase = getTidePhaseLabel(date);
 
-  if (extremes.length === 0) return '潮の動きをチェックして狙ってみてね！';
+  if (extremes.length === 0) return `今日は${phase}。潮の動きをチェックして狙ってみてね！`;
 
   const now = date.getTime();
   const upcoming = extremes.find((e) => new Date(e.time).getTime() > now);
@@ -230,9 +270,9 @@ export function getTideTimingHint(area: FishingArea, date: Date = new Date()): s
   const timeStr = formatJstTime(target.time);
 
   if (target.type === 'high') {
-    return `今は上げ潮！${timeStr}ごろの満潮に向けてが狙い目だよ！`;
+    return `今日は${phase}！今は上げ潮！${timeStr}ごろの満潮に向けてが狙い目だよ！`;
   }
-  return `今は下げ潮で、${timeStr}ごろが干潮の底。そこから上げ潮に変わるタイミングも狙い目だよ！`;
+  return `今日は${phase}。今は下げ潮で、${timeStr}ごろが干潮の底。そこから上げ潮に変わるタイミングも狙い目だよ！`;
 }
 
 // ============================================================================

@@ -13,7 +13,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import { Waves, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import type { FishingArea } from '@/lib/areas';
-import { generateTideCurve, findTideExtremes, formatJstTime } from '@/lib/logic';
+import { generateTideCurve, findTideExtremes, formatJstTime, getTidePhaseLabel } from '@/lib/logic';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
@@ -22,11 +22,12 @@ type Props = {
 };
 
 export default function TideChart({ area }: Props) {
-  const { chartData, extremes, currentHour } = useMemo(() => {
+  const { chartData, extremes, currentHour, tidePhase } = useMemo(() => {
     const points = generateTideCurve(area);
     const extremes = findTideExtremes(points);
     const now = new Date();
     const currentHour = now.getHours() + now.getMinutes() / 60;
+    const tidePhase = getTidePhaseLabel(now);
 
     return {
       chartData: {
@@ -46,14 +47,26 @@ export default function TideChart({ area }: Props) {
       },
       extremes,
       currentHour,
+      tidePhase,
     };
   }, [area]);
 
+  const isBigTide = tidePhase === '大潮' || tidePhase === '中潮';
+
   return (
     <section className="rounded-2xl bg-white p-4 shadow-card sm:p-5">
-      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ocean-900 sm:text-base">
-        <Waves className="h-4 w-4 text-ocean-600" />
-        潮汐（タイドグラフ）
+      <h2 className="mb-1 flex items-center justify-between gap-1.5 text-sm font-bold text-ocean-900 sm:text-base">
+        <span className="flex items-center gap-1.5">
+          <Waves className="h-4 w-4 text-ocean-600" />
+          潮汐（タイドグラフ）
+        </span>
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+            isBigTide ? 'bg-coral-500 text-white' : 'bg-ocean-100 text-ocean-700'
+          }`}
+        >
+          今日は{tidePhase}
+        </span>
       </h2>
       <p className="mb-3 text-[11px] text-gray-400">
         ※ 簡易シミュレーション値です。正確な潮汐は気象庁等の公式データをご確認ください。

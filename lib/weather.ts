@@ -12,6 +12,8 @@ export type HourlyForecastPoint = {
   weatherCode: number; // WMO Weather code
 };
 
+export type PressureTrend = 'falling' | 'rising' | 'stable';
+
 export type WeatherData = {
   temperature: number; // 気温 (℃)
   windSpeed: number; // 風速 (m/s)
@@ -20,6 +22,9 @@ export type WeatherData = {
   weatherCode: number; // WMO Weather code
   sunrise: string; // 日の出時刻 (ISO, ローカルタイム)
   sunset: string; // 日の入り時刻 (ISO, ローカルタイム)
+  pressure: number; // 海面気圧 (hPa)
+  pressureChange3h: number; // 3時間前からの気圧変化 (hPa、負なら下降中)
+  pressureTrend: PressureTrend; // 気圧が下降中の方が魚の活性が上がるとされる（経験則）
   hourlyForecast: HourlyForecastPoint[]; // 現在時刻から数時間先までの予報（釣行計画用）
   fetchedAt: string; // 取得時刻 (ISO)
 };
@@ -58,16 +63,20 @@ const OPEN_METEO_BASE = 'https://api.open-meteo.com/v1/forecast';
  * - 降水確率は hourly から現在時刻に最も近い値を採用
  */
 const HOURLY_FORECAST_HOURS = 6; // 数時間先の予報として表示する時間数
+const PRESSURE_TREND_WINDOW_HOURS = 3; // 気圧トレンドを見る過去の時間幅
+const PRESSURE_TREND_THRESHOLD_HPA = 1.0; // このhPa以上の変化があればトレンドありと判定
 
 export async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
-    current: 'temperature_2m,wind_speed_10m,wind_direction_10m,weather_code',
-    hourly: 'temperature_2m,precipitation_probability,wind_speed_10m,weather_code',
+    current: 'temperature_2m,wind_speed_10m,wind_direction_10m,weather_code,pressure_msl',
+    hourly: 'temperature_2m,precipitation_probability,wind_speed_10m,weather_code,pressure_msl',
     daily: 'sunrise,sunset',
     wind_speed_unit: 'ms',
     timezone: 'Asia/Tokyo',
+    // 気圧トレンド判定のために直近の実績値も取得する
+    past_days: '1',
     // 深夜近くに見ても数時間先まで予報が切れないよう2日分取得する
     forecast_days: '2',
   });
@@ -88,6 +97,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   const hourlyPop: number[] = json.hourly?.precipitation_probability ?? [];
   const hourlyWind: number[] = json.hourly?.wind_speed_10m ?? [];
   const hourlyCode: number[] = json.hourly?.weather_code ?? [];
+  const hourlyPressure: number[] = json.hourly?.pressure_msl ?? [];
 
   // 現在時刻に一番近いhourlyインデックスを探す
   let popIdx = 0;
@@ -120,6 +130,19 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   const sunrise: string = daily.sunrise?.[0] ?? '';
   const sunset: string = daily.sunset?.[0] ?? '';
 
+  // 気圧トレンド判定（過去days=1を含めて取得しているので、popIdxより前を参照できる）
+  const currentPressure = current.pressure_msl ?? hourlyPressure[popIdx] ?? 0;
+  const pastIdx = Math.max(0, popIdx - PRESSURE_TREND_WINDOW_HOURS);
+  const pastPressure = hourlyPressure[pastIdx] ?? currentPressure;
+  const pressureChange3h = Math.round((currentPressure - pastPressure) * 10) / 10;
+
+  let pressureTrend: PressureTrend = 'stable';
+  if (pressureChange3h <= -PRESSURE_TREND_THRESHOLD_HPA) {
+    pressureTrend = 'falling';
+  } else if (pressureChange3h >= PRESSURE_TREND_THRESHOLD_HPA) {
+    pressureTrend = 'rising';
+  }
+
   return {
     temperature: current.temperature_2m ?? 0,
     windSpeed: current.wind_speed_10m ?? 0,
@@ -128,6 +151,9 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     weatherCode: current.weather_code ?? 0,
     sunrise,
     sunset,
+    pressure: Math.round(currentPressure * 10) / 10,
+    pressureChange3h,
+    pressureTrend,
     hourlyForecast,
     fetchedAt: current.time ?? new Date().toISOString(),
   };
