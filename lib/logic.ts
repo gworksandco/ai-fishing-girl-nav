@@ -276,6 +276,92 @@ export function getTideTimingHint(area: FishingArea, date: Date = new Date()): s
 }
 
 // ============================================================================
+// 本日のねらい目タイム（潮の動き × マズメ × 気圧 の総合判定）
+// ----------------------------------------------------------------------------
+// 「潮がよく動く時間帯」「朝夕マズメ」を軸にスコアリングし、本日これからの
+// 時間の中で最もスコアが高い30分ポイントを「ねらい目」として提示する。
+// 気圧トレンドは特定の時間帯に紐づく情報ではないため、補足コメントとして添える。
+// ============================================================================
+
+export type PeakActivityWindow = {
+  startTime: string; // ISO
+  endTime: string; // ISO
+  reasons: string[]; // 例: ['夕マズメ', '潮がよく動く時間帯']
+};
+
+const TIDE_FLOW_SCORE_UNIT = 1; // 30分あたりの潮位変化量1につき加算するスコア
+const MAZUME_SCORE_BONUS = 5; // マズメ帯への加点（潮の動きより優先させたい）
+const TIDE_FLOW_NOTABLE_THRESHOLD = 2; // これ以上の潮位変化で「よく動く」とみなす
+
+export function getPeakActivityWindow(
+  area: FishingArea,
+  weather: WeatherData | null,
+  date: Date = new Date()
+): PeakActivityWindow | null {
+  const points = generateTideCurve(area, date);
+  const future = points.filter((p) => new Date(p.time).getTime() >= date.getTime());
+  if (future.length < 2) return null;
+
+  const sunrise = weather?.sunrise ? new Date(weather.sunrise) : null;
+  const sunset = weather?.sunset ? new Date(weather.sunset) : null;
+
+  let best: { point: TidePoint; score: number; reasons: string[] } | null = null;
+
+  for (let i = 0; i < future.length - 1; i++) {
+    const point = future[i];
+    const next = future[i + 1];
+    const flow = Math.abs(next.level - point.level);
+    const t = new Date(point.time).getTime();
+
+    let score = flow * TIDE_FLOW_SCORE_UNIT;
+    const reasons: string[] = [];
+    if (flow >= TIDE_FLOW_NOTABLE_THRESHOLD) reasons.push('潮がよく動く時間帯');
+
+    if (sunrise && minutesBetween(new Date(t), sunrise) <= MAZUME_WINDOW_MINUTES) {
+      score += MAZUME_SCORE_BONUS;
+      reasons.push('朝マズメ');
+    }
+    if (sunset && minutesBetween(new Date(t), sunset) <= MAZUME_WINDOW_MINUTES) {
+      score += MAZUME_SCORE_BONUS;
+      reasons.push('夕マズメ');
+    }
+
+    if (!best || score > best.score) {
+      best = { point, score, reasons };
+    }
+  }
+
+  if (!best) return null;
+
+  const centerMs = new Date(best.point.time).getTime();
+  return {
+    startTime: new Date(centerMs - 30 * 60000).toISOString(),
+    endTime: new Date(centerMs + 30 * 60000).toISOString(),
+    reasons: best.reasons.length > 0 ? best.reasons : ['潮の動き'],
+  };
+}
+
+/** 「本日のねらい目タイム」をまとめて一文で表示するためのヒント文。 */
+export function getPeakActivityHint(
+  area: FishingArea,
+  weather: WeatherData | null,
+  date: Date = new Date()
+): string {
+  const window = getPeakActivityWindow(area, weather, date);
+  if (!window) return '本日はこれ以上のねらい目タイムはなさそうだよ。潮の動きをチェックしてみてね！';
+
+  const startStr = formatJstTime(window.startTime);
+  const endStr = formatJstTime(window.endTime);
+  const reasonStr = window.reasons.join('×');
+
+  let text = `本日のねらい目は ${startStr}〜${endStr}（${reasonStr}）！`;
+  if (weather?.pressureTrend === 'falling') {
+    text += ' 気圧も下降中で、活性アップも期待できるよ！';
+  }
+  return text;
+}
+
+// ============================================================================
 // ターゲット別おすすめ仕掛け（アフィリエイト導線用マスターデータ）
 // ============================================================================
 

@@ -104,7 +104,7 @@ export default function Home() {
 
       <HourlyForecast weather={weather} />
 
-      <TideChart area={area} />
+      <TideChart area={area} weather={weather} />
 
       <CatchSection area={area} targets={targets} />
 

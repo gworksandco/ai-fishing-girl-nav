@@ -11,23 +11,32 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { Waves, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Waves, ArrowUpCircle, ArrowDownCircle, Target } from 'lucide-react';
 import type { FishingArea } from '@/lib/areas';
-import { generateTideCurve, findTideExtremes, formatJstTime, getTidePhaseLabel } from '@/lib/logic';
+import type { WeatherData } from '@/lib/weather';
+import {
+  generateTideCurve,
+  findTideExtremes,
+  formatJstTime,
+  getTidePhaseLabel,
+  getPeakActivityHint,
+} from '@/lib/logic';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
 type Props = {
   area: FishingArea;
+  weather: WeatherData | null;
 };
 
-export default function TideChart({ area }: Props) {
-  const { chartData, extremes, currentHour, tidePhase } = useMemo(() => {
+export default function TideChart({ area, weather }: Props) {
+  const { chartData, extremes, currentHour, tidePhase, peakActivityHint } = useMemo(() => {
     const points = generateTideCurve(area);
     const extremes = findTideExtremes(points);
     const now = new Date();
     const currentHour = now.getHours() + now.getMinutes() / 60;
     const tidePhase = getTidePhaseLabel(now);
+    const peakActivityHint = getPeakActivityHint(area, weather, now);
 
     return {
       chartData: {
@@ -48,8 +57,9 @@ export default function TideChart({ area }: Props) {
       extremes,
       currentHour,
       tidePhase,
+      peakActivityHint,
     };
-  }, [area]);
+  }, [area, weather]);
 
   const isBigTide = tidePhase === '大潮' || tidePhase === '中潮';
 
@@ -117,6 +127,14 @@ export default function TideChart({ area }: Props) {
           </div>
         ))}
       </div>
+
+      <div className="mt-3 flex items-start gap-2 rounded-xl bg-coral-500/10 px-3 py-3">
+        <Target className="mt-0.5 h-4 w-4 shrink-0 text-coral-500" />
+        <p className="text-xs font-semibold leading-relaxed text-coral-600 sm:text-sm">
+          {peakActivityHint}
+        </p>
+      </div>
+
       <p className="sr-only">現在時刻: {currentHour.toFixed(1)}時</p>
     </section>
   );
