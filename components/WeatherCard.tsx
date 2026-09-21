@@ -14,7 +14,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { degreeToCompass, weatherCodeToLabel, type WeatherData } from '@/lib/weather';
-import { WIND_ALERT_THRESHOLD, type SeaTemperatureInsight } from '@/lib/logic';
+import { WIND_ALERT_THRESHOLD, getWindStyleHint, type SeaTemperatureInsight } from '@/lib/logic';
 
 type Props = {
   weather: WeatherData | null;
@@ -25,6 +25,7 @@ type Props = {
 
 export default function WeatherCard({ weather, loading, error, seaTemperatureInsight }: Props) {
   const isWindAlert = !!weather && weather.windSpeed >= WIND_ALERT_THRESHOLD;
+  const windStyleHint = weather ? getWindStyleHint(weather) : '';
 
   return (
     <section className="rounded-2xl bg-white p-4 shadow-card sm:p-5">
@@ -110,6 +111,9 @@ export default function WeatherCard({ weather, loading, error, seaTemperatureIns
             >
               {seaTemperatureInsight.text}
             </p>
+          )}
+          {windStyleHint && (
+            <p className="mt-2 text-[11px] font-semibold text-ocean-600">{windStyleHint}</p>
           )}
           <p className="mt-3 text-xs text-gray-400">
             現在の空模様：{weatherCodeToLabel(weather.weatherCode)}

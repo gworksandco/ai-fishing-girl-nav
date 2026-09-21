@@ -1,6 +1,6 @@
 import type { FishingArea, FishTarget } from './areas';
 import type { WeatherData } from './weather';
-import { weatherCodeToLabel } from './weather';
+import { weatherCodeToLabel, degreeToCompass } from './weather';
 
 // ============================================================================
 // ナミ（AI釣りガール）のセリフ生成ロジック
@@ -434,6 +434,44 @@ export function getSeaTemperatureInsight(
     text: `水温${temp.toFixed(1)}℃。今のおすすめターゲットの適水温からは少し外れ気味かも。`,
     favorable: false,
   };
+}
+
+// ============================================================================
+// 風速・風向きからの釣りスタイル提案
+// ----------------------------------------------------------------------------
+// 風速の強さによって有利な釣り方（軽量ルアー向きか、風に強い重めの仕掛け向きか）
+// が変わるという経験則と、風向きから「追い風でキャストが伸びる方角」を判定して
+// アドバイスする。海岸線の向き（オンショア/オフショア判定）にはエリアごとの
+// マスターデータが必要になるため踏み込まず、「どの方角に投げると飛距離が
+// 出しやすいか」という向き非依存の実用的なヒントに留める。
+// 強風注意（WIND_ALERT_THRESHOLD以上）は既存の安全優先メッセージに譲り、
+// ここでは提案しない。
+// ============================================================================
+
+const WIND_CALM_MAX = 2; // m/s、これ以下は凪とみなす
+const WIND_GOOD_MAX = 4; // m/s、この帯がルアー釣り全般の好条件とされる
+
+export function getWindStyleHint(weather: WeatherData): string {
+  const { windSpeed, windDirection } = weather;
+
+  if (windSpeed >= WIND_ALERT_THRESHOLD) return ''; // 安全優先メッセージに譲る
+
+  let hint: string;
+  if (windSpeed < WIND_CALM_MAX) {
+    hint = '凪気味。トップウォーターやサイトフィッシング、軽量ジグヘッドでの繊細な誘いがしやすい状態だよ！';
+  } else if (windSpeed < WIND_GOOD_MAX) {
+    hint = '適度な風で水面が程よく波立ってるよ。ルアーが見切られにくい好条件！エギングやルアー全般に向いてる時間帯！';
+  } else {
+    hint = '風でラインや軽いルアーが流されやすいから、サビキ・カゴ釣りや重めのメタルジグなど風に強い仕掛けが有利だよ！';
+  }
+
+  // 追い風方向（風上ではなく風が吹いていく先）は風向きの反対側
+  if (windSpeed >= WIND_CALM_MAX) {
+    const downwindDeg = (windDirection + 180) % 360;
+    hint += ` 追い風になる${degreeToCompass(downwindDeg)}方向へのキャストは飛距離が出しやすいよ！`;
+  }
+
+  return hint;
 }
 
 // ============================================================================
